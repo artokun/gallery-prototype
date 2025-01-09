@@ -1,15 +1,71 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { chunkState } from "@/app/state.chunk";
+import { cn } from "@workspace/ui/lib/utils";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
+import { Draggable } from "gsap/Draggable";
 import { useSnapshot } from "valtio";
+import InertiaPlugin from "gsap/InertiaPlugin";
+import { Observer } from "gsap/Observer";
 
-const CHUNK_SIZE = 500;
+const CHUNK_SIZE = 1000;
 const CHUNK_ITEMS = 22;
 
 export function GridChunks() {
   const chunkElements = useSnapshot(chunkState.chunkElements);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    gsap.registerPlugin(useGSAP, Draggable, InertiaPlugin, Observer);
+  }, []);
+
+  useGSAP(
+    () => {
+      Draggable.create(anchorRef.current, {
+        bounds: {
+          left: -10000,
+          top: -10000,
+          height: 20000,
+          width: 20000,
+        },
+        inertia: true,
+        cursor: "pointer",
+        activeCursor: "grabbing",
+        onClick: (self) => {
+          const itemRect = self.target.getBoundingClientRect();
+          const anchorRect = document
+            .querySelector("#chunks-anchor")
+            ?.getBoundingClientRect();
+
+          if (anchorRect) {
+            console.log(itemRect, anchorRect);
+            gsap.to("#chunks-anchor", {
+              x:
+                -(itemRect.left - anchorRect.left) +
+                window.innerWidth / 2 -
+                itemRect.width / 2,
+              y:
+                -(itemRect.top - anchorRect.top) +
+                window.innerHeight / 2 -
+                itemRect.height / 2,
+              duration: 1,
+              ease: "power3.out",
+            });
+          }
+        },
+      });
+    },
+    { scope: anchorRef }
+  );
 
   useEffect(() => {
     chunkState.chunkElements.set("0,0", {
@@ -20,8 +76,15 @@ export function GridChunks() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center h-screen w-screen overflow-hidden">
-      <div className="relative h-0 w-0 overflow-visible" ref={anchorRef}>
+    <div
+      ref={containerRef}
+      className="flex justify-center items-center h-screen w-screen overflow-hidden"
+    >
+      <div
+        ref={anchorRef}
+        id="chunks-anchor"
+        className="relative w-screen h-screen overflow-visible"
+      >
         {Array.from(chunkElements.entries()).map(([id, props]) => (
           <GridChunk key={id} {...props} />
         ))}
@@ -150,7 +213,7 @@ export function GridChunk({
     return () => {
       observers.forEach((observer) => observer.disconnect());
     };
-  }, []);
+  }, [x, y]);
 
   useEffect(() => {
     if (
@@ -174,36 +237,36 @@ export function GridChunk({
       }}
     >
       {/* Row 1 */}
-      <div className="grid-item-sm bg-purple-500">{startIndex + 1}</div>
-      <div className="grid-item-sm bg-purple-500">{startIndex + 2}</div>
-      <div className="grid-item-lg bg-green-500">{startIndex + 3}</div>
-      <div className="grid-item-sm bg-blue-500">{startIndex + 4}</div>
-      <div className="grid-item-lg bg-blue-500">{startIndex + 5}</div>
-      <div className="grid-item-sm bg-blue-500">{startIndex + 6}</div>
+      <GridItem index={startIndex + 0} small />
+      <GridItem index={startIndex + 1} small />
+      <GridItem index={startIndex + 2} large />
+      <GridItem index={startIndex + 3} small />
+      <GridItem index={startIndex + 4} large />
+      <GridItem index={startIndex + 5} small />
 
       {/* Row 2 */}
-      <div className="grid-item-lg bg-purple-500">{startIndex + 7}</div>
-      <div className="grid-item-sm bg-blue-500">{startIndex + 8}</div>
-      <div className="grid-item-sm bg-blue-500">{startIndex + 9}</div>
+      <GridItem index={startIndex + 6} large />
+      <GridItem index={startIndex + 7} small />
+      <GridItem index={startIndex + 8} small />
 
       {/* Row 3 */}
-      <div className="grid-item-sm bg-green-500">{startIndex + 10}</div>
-      <div className="grid-item-sm bg-green-500">{startIndex + 11}</div>
-      <div className="grid-item-sm bg-purple-500">{startIndex + 12}</div>
-      <div className="grid-item-sm bg-purple-500">{startIndex + 13}</div>
-      <div className="grid-item-lg bg-green-500">{startIndex + 14}</div>
+      <GridItem index={startIndex + 9} small />
+      <GridItem index={startIndex + 10} small />
+      <GridItem index={startIndex + 11} small />
+      <GridItem index={startIndex + 12} small />
+      <GridItem index={startIndex + 13} large />
 
       {/* Row 4 */}
-      <div className="grid-item-sm bg-blue-500">{startIndex + 15}</div>
-      <div className="grid-item-lg bg-blue-500">{startIndex + 16}</div>
-      <div className="grid-item-sm bg-blue-500">{startIndex + 17}</div>
-      <div className="grid-item-lg bg-purple-500">{startIndex + 18}</div>
+      <GridItem index={startIndex + 14} small />
+      <GridItem index={startIndex + 15} large />
+      <GridItem index={startIndex + 16} small />
+      <GridItem index={startIndex + 17} large />
 
       {/* Row 5 */}
-      <div className="grid-item-sm bg-blue-500">{startIndex + 19}</div>
-      <div className="grid-item-sm bg-blue-500">{startIndex + 20}</div>
-      <div className="grid-item-sm bg-green-500">{startIndex + 21}</div>
-      <div className="grid-item-sm bg-green-500">{startIndex + 22}</div>
+      <GridItem index={startIndex + 18} small />
+      <GridItem index={startIndex + 19} small />
+      <GridItem index={startIndex + 20} small />
+      <GridItem index={startIndex + 21} small />
 
       {/* Edge Detectors */}
       <div
@@ -222,6 +285,116 @@ export function GridChunk({
         ref={bottomEdgeRef}
         className="observable-bottom-edge absolute bottom-0 left-0 w-full h-1"
       />
+    </div>
+  );
+}
+
+function GridItem({
+  index,
+  large,
+  small,
+}: {
+  index: number;
+  large?: boolean;
+  small?: boolean;
+}) {
+  const images = useSnapshot(chunkState.images);
+  const itemRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  const getImage = useCallback(() => {
+    return images[index % images.length] ?? "/images/placeholder.png";
+  }, [images, index]);
+
+  const [url = "", color = "lightgray"] = getImage().split("?color=");
+
+  useGSAP(
+    () => {
+      gsap.set(itemRef.current, {
+        opacity: 0,
+        rotateY: 45,
+        backgroundColor: color,
+      });
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            try {
+              if (entry.isIntersecting) {
+                gsap.to(itemRef.current, {
+                  opacity: 1,
+                  rotateY: 0,
+                  backgroundColor: color,
+                  duration: 1,
+                  ease: "power1.out",
+                });
+
+                imageRef.current!.onload = () => {
+                  if (imageRef.current) {
+                    gsap.to(imageRef.current, {
+                      opacity: 1,
+                      duration: 1,
+                      delay: 0.5,
+                      ease: "power1.out",
+                    });
+                  }
+                };
+
+                imageRef.current!.src = url;
+              }
+            } catch (error) {
+              console.error(error);
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+        }
+      );
+      observer.observe(itemRef.current!);
+
+      Observer.create({
+        target: itemRef.current,
+        onHover: (self) => {
+          gsap.to(self.target.querySelector(".preview-image"), {
+            scale: 1.1,
+            duration: 1,
+            ease: "power1.out",
+          });
+        },
+        onHoverEnd: (self) => {
+          gsap.to(self.target.querySelector(".preview-image"), {
+            scale: 1,
+            duration: 1,
+            ease: "power1.out",
+          });
+        },
+      });
+
+      return () => {
+        observer.disconnect();
+      };
+    },
+    { scope: itemRef }
+  );
+
+  return (
+    <div
+      ref={itemRef}
+      className={cn(
+        "grid-item relative overflow-hidden",
+        large && "grid-item-lg",
+        small && "grid-item-sm"
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imageRef}
+        alt={`Image ${index}`}
+        className="preview-image w-full h-full object-cover opacity-0"
+      />
+      <div className="flex items-center justify-center text-2xl absolute inset-0">
+        {index % images.length}
+      </div>
     </div>
   );
 }

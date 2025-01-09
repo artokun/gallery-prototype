@@ -75,7 +75,7 @@
 }
 @layer utilities {
   .grid-item {
-    @apply flex items-center justify-center rounded-md text-2xl;
+    @apply rounded-xl;
   }
   .grid-chunk {
     @apply grid gap-1 aspect-square absolute p-0.5;
