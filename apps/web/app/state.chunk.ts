@@ -18,7 +18,7 @@ type ChunkProps = {
 export const chunkState = proxy<ChunkState>({
   chunkElements: proxyMap<string, ChunkProps>(),
   // images: Array.from({ length: 22 }, (_, i) => `/shoes/shoe-${i + 1}.webp?color=${generateHexColor()}`),
-  images: Array.from({ length: 50 }, (_, i) => `https://picsum.photos/seed/${i}/200/300?color=${generateHexColor()}`),
+  images: Array.from({ length: 50 }, (_, i) => `https://picsum.photos/seed/${i}/500/700?color=${generateHexColor()}`),
   currentIndex: 0,
   hasMoved: false,
 });
