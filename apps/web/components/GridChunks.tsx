@@ -20,13 +20,11 @@ const CHUNK_SIZE = 1000;
 const CHUNK_ITEMS = 22;
 
 export function GridChunks() {
-  const chunkElements = useSnapshot(chunkState.chunkElements);
+  const { chunkElements } = useSnapshot(chunkState);
   const anchorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  // const scrollYTo = useRef<gsap.QuickToFunc>();
-  // const scrollXTo = useRef<gsap.QuickToFunc>();
 
   useLayoutEffect(() => {
     gsap.registerPlugin(useGSAP, Draggable, InertiaPlugin, Observer);
@@ -43,15 +41,8 @@ export function GridChunks() {
   const { contextSafe } = useGSAP(
     () => {
       Draggable.create(anchorRef.current, {
-        // bounds: {
-        //   left: -10000,
-        //   top: -10000,
-        //   height: 20000,
-        //   width: 20000,
-        // },
         inertia: true,
         cursor: "default",
-        // activeCursor: "grabbing",
         zIndexBoost: false,
         onDragStart: () => {
           chunkState.hasMoved = true;
@@ -118,23 +109,11 @@ export function GridChunks() {
         backgroundColor: "rgba(0, 0, 0, 0)",
       });
 
-      // scrollYTo.current = gsap.quickTo(anchorRef.current, "y", {
-      //   duration: 0.5,
-      //   ease: "power3.out",
-      // });
-      // scrollXTo.current = gsap.quickTo(anchorRef.current, "x", {
-      //   duration: 0.5,
-      //   ease: "power3.out",
-      // });
-
       Observer.create({
         target: containerRef.current,
         onWheel: (self) => {
           const currentY = gsap.getProperty(anchorRef.current, "y");
           const currentX = gsap.getProperty(anchorRef.current, "x");
-
-          // scrollYTo.current?.(Number(currentY) - self.deltaY);
-          // scrollXTo.current?.(Number(currentX) - self.deltaX);
 
           gsap.to(anchorRef.current, {
             x: Number(currentX) - self.deltaX,
@@ -249,12 +228,10 @@ export function GridChunk({
   x,
   y,
   startIndex,
-  style,
 }: {
   x: number;
   y: number;
   startIndex: number;
-  style?: React.CSSProperties;
 }) {
   const topEdgeRef = useRef<HTMLDivElement>(null);
   const rightEdgeRef = useRef<HTMLDivElement>(null);
