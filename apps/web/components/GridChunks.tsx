@@ -25,9 +25,19 @@ export function GridChunks() {
   const containerRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  // const scrollYTo = useRef<gsap.QuickToFunc>();
+  // const scrollXTo = useRef<gsap.QuickToFunc>();
 
   useLayoutEffect(() => {
     gsap.registerPlugin(useGSAP, Draggable, InertiaPlugin, Observer);
+
+    // Prevent horizontal overscroll navigation
+    const preventDefault = (e: Event) => e.preventDefault();
+    document.addEventListener("wheel", preventDefault, { passive: false });
+
+    return () => {
+      document.removeEventListener("wheel", preventDefault);
+    };
   }, []);
 
   const { contextSafe } = useGSAP(
@@ -40,8 +50,8 @@ export function GridChunks() {
         //   width: 20000,
         // },
         inertia: true,
-        cursor: "pointer",
-        activeCursor: "grabbing",
+        cursor: "default",
+        // activeCursor: "grabbing",
         zIndexBoost: false,
         onDragStart: () => {
           chunkState.hasMoved = true;
@@ -106,6 +116,37 @@ export function GridChunks() {
         opacity: 0,
         backdropFilter: "blur(0px)",
         backgroundColor: "rgba(0, 0, 0, 0)",
+      });
+
+      // scrollYTo.current = gsap.quickTo(anchorRef.current, "y", {
+      //   duration: 0.5,
+      //   ease: "power3.out",
+      // });
+      // scrollXTo.current = gsap.quickTo(anchorRef.current, "x", {
+      //   duration: 0.5,
+      //   ease: "power3.out",
+      // });
+
+      Observer.create({
+        target: containerRef.current,
+        onWheel: (self) => {
+          const currentY = gsap.getProperty(anchorRef.current, "y");
+          const currentX = gsap.getProperty(anchorRef.current, "x");
+
+          // scrollYTo.current?.(Number(currentY) - self.deltaY);
+          // scrollXTo.current?.(Number(currentX) - self.deltaX);
+
+          gsap.to(anchorRef.current, {
+            x: Number(currentX) - self.deltaX,
+            y: Number(currentY) - self.deltaY,
+            duration: 1,
+            ease: "power2.out",
+            inertia: {
+              resistance: 1000,
+              velocity: Math.abs(self.deltaY + self.deltaX) * 0.006,
+            },
+          });
+        },
       });
     },
     { scope: anchorRef }
