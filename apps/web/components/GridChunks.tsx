@@ -233,103 +233,109 @@ export function GridChunk({
   y: number;
   startIndex: number;
 }) {
+  const chunkRef = useRef<HTMLDivElement>(null);
   const topEdgeRef = useRef<HTMLDivElement>(null);
   const rightEdgeRef = useRef<HTMLDivElement>(null);
   const bottomEdgeRef = useRef<HTMLDivElement>(null);
   const leftEdgeRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
 
     const createObserver = (
       element: HTMLDivElement | null,
-      edgeName: string
+      edgeName: string,
+      options: IntersectionObserverInit = {
+        threshold: 0.01,
+      }
     ) => {
       if (!element) return;
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            switch (edgeName) {
-              case "top":
-                if (entry.isIntersecting) {
-                  if (!chunkState.chunkElements.has(`${x},${y - 1}`)) {
-                    chunkState.chunkElements.set(`${x},${y - 1}`, {
-                      x,
-                      y: y - 1,
-                      startIndex: chunkState.currentIndex,
-                    });
-                    chunkState.currentIndex += CHUNK_ITEMS;
-                  }
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          switch (edgeName) {
+            case "top":
+              if (entry.isIntersecting) {
+                if (!chunkState.chunkElements.has(`${x},${y - 1}`)) {
+                  chunkState.chunkElements.set(`${x},${y - 1}`, {
+                    x,
+                    y: y - 1,
+                    startIndex: chunkState.currentIndex,
+                  });
+                  chunkState.currentIndex += CHUNK_ITEMS;
                 }
-                break;
-              case "right":
-                if (entry.isIntersecting) {
-                  if (!chunkState.chunkElements.has(`${x + 1},${y}`)) {
-                    chunkState.chunkElements.set(`${x + 1},${y}`, {
-                      x: x + 1,
-                      y,
-                      startIndex: chunkState.currentIndex,
-                    });
-                    chunkState.currentIndex += CHUNK_ITEMS;
-                  }
+              }
+              break;
+            case "right":
+              if (entry.isIntersecting) {
+                if (!chunkState.chunkElements.has(`${x + 1},${y}`)) {
+                  chunkState.chunkElements.set(`${x + 1},${y}`, {
+                    x: x + 1,
+                    y,
+                    startIndex: chunkState.currentIndex,
+                  });
+                  chunkState.currentIndex += CHUNK_ITEMS;
                 }
-                break;
-              case "bottom":
-                if (entry.isIntersecting) {
-                  if (!chunkState.chunkElements.has(`${x},${y + 1}`)) {
-                    chunkState.chunkElements.set(`${x},${y + 1}`, {
-                      x,
-                      y: y + 1,
-                      startIndex: chunkState.currentIndex,
-                    });
-                    chunkState.currentIndex += CHUNK_ITEMS;
-                  }
+              }
+              break;
+            case "bottom":
+              if (entry.isIntersecting) {
+                if (!chunkState.chunkElements.has(`${x},${y + 1}`)) {
+                  chunkState.chunkElements.set(`${x},${y + 1}`, {
+                    x,
+                    y: y + 1,
+                    startIndex: chunkState.currentIndex,
+                  });
+                  chunkState.currentIndex += CHUNK_ITEMS;
                 }
-                break;
-              case "left":
-                if (entry.isIntersecting) {
-                  if (!chunkState.chunkElements.has(`${x - 1},${y}`)) {
-                    chunkState.chunkElements.set(`${x - 1},${y}`, {
-                      x: x - 1,
-                      y,
-                      startIndex: chunkState.currentIndex,
-                    });
-                    chunkState.currentIndex += CHUNK_ITEMS;
-                  }
+              }
+              break;
+            case "left":
+              if (entry.isIntersecting) {
+                if (!chunkState.chunkElements.has(`${x - 1},${y}`)) {
+                  chunkState.chunkElements.set(`${x - 1},${y}`, {
+                    x: x - 1,
+                    y,
+                    startIndex: chunkState.currentIndex,
+                  });
+                  chunkState.currentIndex += CHUNK_ITEMS;
                 }
-                break;
-              case "container":
-                if (!entry.isIntersecting) {
-                  chunkState.chunkElements.delete(`${x},${y}`);
-                }
-                break;
-            }
-          });
-        },
-        {
-          threshold: 0.1,
-          rootMargin: `${CHUNK_SIZE}px`,
-        }
-      );
+              }
+              break;
+            case "body":
+              if (loadedRef.current && !entry.isIntersecting) {
+                chunkState.chunkElements.delete(`${x},${y}`);
+              }
+              break;
+          }
+        });
+      }, options);
 
       observer.observe(element);
       observers.push(observer);
     };
 
-    createObserver(topEdgeRef.current, "top");
-    createObserver(rightEdgeRef.current, "right");
-    createObserver(bottomEdgeRef.current, "bottom");
-    createObserver(leftEdgeRef.current, "left");
-    createObserver(containerRef.current, "container");
+    createObserver(chunkRef.current, "body", {
+      rootMargin: `${CHUNK_SIZE * 2}px`,
+    });
+    createObserver(topEdgeRef.current, "top", {
+      rootMargin: `${CHUNK_SIZE / 2}px 0px 0px 0px`,
+    });
+    createObserver(rightEdgeRef.current, "right", {
+      rootMargin: `0px 0px 0px ${CHUNK_SIZE / 2}px`,
+    });
+    createObserver(bottomEdgeRef.current, "bottom", {
+      rootMargin: `0px 0px ${CHUNK_SIZE / 2}px 0px`,
+    });
+    createObserver(leftEdgeRef.current, "left", {
+      rootMargin: `0px ${CHUNK_SIZE / 2}px 0px 0px`,
+    });
 
     return () => {
       observers.forEach((observer) => observer.disconnect());
     };
   }, [x, y]);
-
-  const chunkRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -339,6 +345,9 @@ export function GridChunk({
           height: `${CHUNK_SIZE}px`,
           x: `${x * CHUNK_SIZE}px`,
           y: `${y * CHUNK_SIZE}px`,
+          onComplete: () => {
+            loadedRef.current = true;
+          },
         });
       }
     },
@@ -459,6 +468,7 @@ function GridItem({
         },
         {
           threshold: 0.1,
+          rootMargin: `${CHUNK_SIZE}px`,
         }
       );
       observer.observe(itemRef.current!);
