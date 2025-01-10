@@ -33,17 +33,21 @@ export function GridChunks() {
   const { contextSafe } = useGSAP(
     () => {
       Draggable.create(anchorRef.current, {
-        bounds: {
-          left: -10000,
-          top: -10000,
-          height: 20000,
-          width: 20000,
-        },
+        // bounds: {
+        //   left: -10000,
+        //   top: -10000,
+        //   height: 20000,
+        //   width: 20000,
+        // },
         inertia: true,
         cursor: "pointer",
         activeCursor: "grabbing",
         zIndexBoost: false,
+        onDragStart: () => {
+          chunkState.hasMoved = true;
+        },
         onClick: (self) => {
+          if (!self.target.classList.contains("preview-image")) return;
           handleOpenDialog();
           const itemRect = self.target.getBoundingClientRect();
           const anchorRect = document
@@ -58,7 +62,7 @@ export function GridChunks() {
           const targetImgRect = targetImg.getBoundingClientRect();
 
           gsap.set(detailsImgWrapper, {
-            opacity: 0,
+            opacity: 1,
             width: targetImgRect.width,
             height: targetImgRect.height,
             scale: 0.95,
@@ -107,6 +111,13 @@ export function GridChunks() {
     { scope: anchorRef }
   );
 
+  const resetAnchorPosition = contextSafe(() => {
+    gsap.set(anchorRef.current, {
+      x: 0,
+      y: 0,
+    });
+  });
+
   const handleOpenDialog = contextSafe(() => {
     setDetailModalOpen(true);
 
@@ -140,6 +151,18 @@ export function GridChunks() {
       startIndex: 0,
     });
   }, []);
+
+  useEffect(() => {
+    if (chunkElements.size === 0) {
+      resetAnchorPosition();
+      chunkState.currentIndex = 0;
+      chunkState.chunkElements.set("0,0", {
+        x: 0,
+        y: 0,
+        startIndex: 0,
+      });
+    }
+  }, [chunkElements.size, resetAnchorPosition]);
 
   return (
     <div
@@ -196,12 +219,7 @@ export function GridChunk({
   const rightEdgeRef = useRef<HTMLDivElement>(null);
   const bottomEdgeRef = useRef<HTMLDivElement>(null);
   const leftEdgeRef = useRef<HTMLDivElement>(null);
-  const [visibleEdges, setVisibleEdges] = useState<{
-    top: boolean | null;
-    right: boolean | null;
-    bottom: boolean | null;
-    left: boolean | null;
-  }>({ top: null, right: null, bottom: null, left: null });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -217,10 +235,6 @@ export function GridChunk({
           entries.forEach((entry) => {
             switch (edgeName) {
               case "top":
-                setVisibleEdges((prev) => ({
-                  ...prev,
-                  top: entry.isIntersecting,
-                }));
                 if (entry.isIntersecting) {
                   if (!chunkState.chunkElements.has(`${x},${y - 1}`)) {
                     chunkState.chunkElements.set(`${x},${y - 1}`, {
@@ -233,10 +247,6 @@ export function GridChunk({
                 }
                 break;
               case "right":
-                setVisibleEdges((prev) => ({
-                  ...prev,
-                  right: entry.isIntersecting,
-                }));
                 if (entry.isIntersecting) {
                   if (!chunkState.chunkElements.has(`${x + 1},${y}`)) {
                     chunkState.chunkElements.set(`${x + 1},${y}`, {
@@ -249,10 +259,6 @@ export function GridChunk({
                 }
                 break;
               case "bottom":
-                setVisibleEdges((prev) => ({
-                  ...prev,
-                  bottom: entry.isIntersecting,
-                }));
                 if (entry.isIntersecting) {
                   if (!chunkState.chunkElements.has(`${x},${y + 1}`)) {
                     chunkState.chunkElements.set(`${x},${y + 1}`, {
@@ -265,10 +271,6 @@ export function GridChunk({
                 }
                 break;
               case "left":
-                setVisibleEdges((prev) => ({
-                  ...prev,
-                  left: entry.isIntersecting,
-                }));
                 if (entry.isIntersecting) {
                   if (!chunkState.chunkElements.has(`${x - 1},${y}`)) {
                     chunkState.chunkElements.set(`${x - 1},${y}`, {
@@ -278,6 +280,11 @@ export function GridChunk({
                     });
                     chunkState.currentIndex += CHUNK_ITEMS;
                   }
+                }
+                break;
+              case "container":
+                if (!entry.isIntersecting) {
+                  chunkState.chunkElements.delete(`${x},${y}`);
                 }
                 break;
             }
@@ -297,33 +304,31 @@ export function GridChunk({
     createObserver(rightEdgeRef.current, "right");
     createObserver(bottomEdgeRef.current, "bottom");
     createObserver(leftEdgeRef.current, "left");
+    createObserver(containerRef.current, "container");
 
     return () => {
       observers.forEach((observer) => observer.disconnect());
     };
   }, [x, y]);
 
-  useEffect(() => {
-    if (
-      visibleEdges.top === false &&
-      visibleEdges.right === false &&
-      visibleEdges.bottom === false &&
-      visibleEdges.left === false
-    ) {
-      chunkState.chunkElements.delete(`${x},${y}`);
-    }
-  }, [visibleEdges, x, y]);
+  const chunkRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (chunkRef.current) {
+        gsap.set(chunkRef.current, {
+          width: `${CHUNK_SIZE}px`,
+          height: `${CHUNK_SIZE}px`,
+          x: `${x * CHUNK_SIZE}px`,
+          y: `${y * CHUNK_SIZE}px`,
+        });
+      }
+    },
+    { scope: chunkRef }
+  );
 
   return (
-    <div
-      className="grid-chunk"
-      style={{
-        width: `${CHUNK_SIZE}px`,
-        height: `${CHUNK_SIZE}px`,
-        transform: `translate3d(calc(${x * CHUNK_SIZE}px - 50%), calc(${y * CHUNK_SIZE}px - 50%), 0)`,
-        ...style,
-      }}
-    >
+    <div ref={chunkRef} className="grid-chunk">
       {/* Row 1 */}
       <GridItem index={startIndex + 0} small />
       <GridItem index={startIndex + 1} small />
@@ -400,7 +405,7 @@ function GridItem({
     () => {
       gsap.set(itemRef.current, {
         opacity: 0,
-        rotateY: 45,
+        scale: !chunkState.hasMoved ? 1 : 0.9,
         backgroundColor: color,
       });
       const observer = new IntersectionObserver(
@@ -410,10 +415,10 @@ function GridItem({
               if (entry.isIntersecting) {
                 gsap.to(itemRef.current, {
                   opacity: 1,
-                  rotateY: 0,
+                  scale: 1,
                   backgroundColor: color,
                   duration: 1,
-                  ease: "power1.out",
+                  ease: "elastic.out(0.4, 0.3)",
                 });
 
                 imageRef.current!.onload = () => {
