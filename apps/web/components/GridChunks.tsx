@@ -23,12 +23,14 @@ export function GridChunks() {
   const chunkElements = useSnapshot(chunkState.chunkElements);
   const anchorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   useLayoutEffect(() => {
     gsap.registerPlugin(useGSAP, Draggable, InertiaPlugin, Observer);
   }, []);
 
-  useGSAP(
+  const { contextSafe } = useGSAP(
     () => {
       Draggable.create(anchorRef.current, {
         bounds: {
@@ -40,14 +42,47 @@ export function GridChunks() {
         inertia: true,
         cursor: "pointer",
         activeCursor: "grabbing",
+        zIndexBoost: false,
         onClick: (self) => {
+          handleOpenDialog();
           const itemRect = self.target.getBoundingClientRect();
           const anchorRect = document
             .querySelector("#chunks-anchor")
             ?.getBoundingClientRect();
 
+          const targetImg = self.target as HTMLImageElement;
+          const detailsImgWrapper = dialogRef.current!.querySelector(
+            ".details-image-wrapper"
+          )!;
+          const detailsImg = detailsImgWrapper.querySelector("img")!;
+          const targetImgRect = targetImg.getBoundingClientRect();
+
+          gsap.set(detailsImgWrapper, {
+            opacity: 0,
+            width: targetImgRect.width,
+            height: targetImgRect.height,
+            scale: 0.95,
+          });
+
+          detailsImg.onload = () => {
+            gsap.to(detailsImgWrapper, {
+              opacity: 1,
+              duration: 0.5,
+              ease: "power3.out",
+            });
+            gsap.to(detailsImgWrapper, {
+              scale: 1,
+              duration: 1,
+              width: 500,
+              height: 700,
+              delay: 0.25,
+              ease: "ease.inOut",
+            });
+          };
+
+          detailsImg.src = targetImg.src;
+
           if (anchorRect) {
-            console.log(itemRect, anchorRect);
             gsap.to("#chunks-anchor", {
               x:
                 -(itemRect.left - anchorRect.left) +
@@ -57,15 +92,46 @@ export function GridChunks() {
                 -(itemRect.top - anchorRect.top) +
                 window.innerHeight / 2 -
                 itemRect.height / 2,
-              duration: 1,
+              duration: 0.5,
               ease: "power3.out",
             });
           }
         },
       });
+      gsap.set(dialogRef.current, {
+        opacity: 0,
+        backdropFilter: "blur(0px)",
+        backgroundColor: "rgba(0, 0, 0, 0)",
+      });
     },
     { scope: anchorRef }
   );
+
+  const handleOpenDialog = contextSafe(() => {
+    setDetailModalOpen(true);
+
+    gsap.to(dialogRef.current, {
+      opacity: 1,
+      backdropFilter: "blur(10px)",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      duration: 1,
+      ease: "power3.out",
+    });
+  });
+
+  const handleCloseDialog = contextSafe(() => {
+    gsap.to(dialogRef.current, {
+      opacity: 0,
+      backdropFilter: "blur(0px)",
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      duration: 0.5,
+      ease: "power3.out",
+    });
+
+    setTimeout(() => {
+      setDetailModalOpen(false);
+    }, 500);
+  });
 
   useEffect(() => {
     chunkState.chunkElements.set("0,0", {
@@ -89,6 +155,28 @@ export function GridChunks() {
           <GridChunk key={id} {...props} />
         ))}
       </div>
+      <dialog
+        open={detailModalOpen}
+        className="w-screen h-screen bg-transparent"
+      >
+        <div
+          ref={dialogRef}
+          className="flex justify-center items-center w-screen h-screen"
+        >
+          <div
+            style={{ aspectRatio: "4.5/7", width: "500px" }}
+            className="details-image-wrapper overflow-hidden rounded-xl shadow-2xl shadow-white/50"
+          >
+            <img alt="Expanded Image" className="w-full h-full object-cover" />
+          </div>
+          <button
+            className="absolute top-0 right-0 p-2 text-white"
+            onClick={handleCloseDialog}
+          >
+            Close
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }
@@ -392,7 +480,7 @@ function GridItem({
         alt={`Image ${index}`}
         className="preview-image w-full h-full object-cover opacity-0"
       />
-      <div className="flex items-center justify-center text-2xl absolute inset-0">
+      <div className="flex items-center justify-center text-2xl absolute inset-0 pointer-events-none">
         {index % images.length}
       </div>
     </div>
