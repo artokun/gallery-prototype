@@ -503,9 +503,9 @@ function GridItem({
         alt={`Image ${index}`}
         className="preview-image w-full h-full object-cover opacity-0"
       />
-      <div className="flex items-center justify-center text-2xl absolute inset-0 pointer-events-none">
+      {/* <div className="flex items-center justify-center text-2xl absolute inset-0 pointer-events-none">
         {index % images.length}
-      </div>
+      </div> */}
     </div>
   );
 }
